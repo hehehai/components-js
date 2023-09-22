@@ -1,0 +1,61 @@
+{
+  "name": "@livekit/components-vue",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "author": "LiveKit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/livekit/components-js.git",
+    "directory": "/packages/vue"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./hooks": {
+      "types": "./dist/hooks/index.d.ts",
+      "import": "./dist/hooks/index.mjs",
+      "require": "./dist/hooks/index.js"
+    },
+    "./prefabs": {
+      "types": "./dist/prefabs/index.d.ts",
+      "import": "./dist/prefabs/index.mjs",
+      "require": "./dist/prefabs/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src"
+  ],
+  "typings": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build"
+  },
+  "dependencies": {
+    "@livekit/components-core": "0.7.0"
+  },
+  "peerDependencies": {
+    "livekit-client": "^1.12.0",
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {
+    "vite-plugin-dts": "^3.5.4",
+    "@vitejs/plugin-vue": "^4.2.3",
+    "typescript": "5.2.2",
+    "vite": "^4.4.5",
+    "vue-tsc": "^1.8.5"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
