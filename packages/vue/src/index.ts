@@ -1,6 +1,7 @@
-export * from './hooks'
-export * from './prefabs'
+export * from './components';
 
-export function demo(a: number, b: number ) {
-  return a + b
-}
+export * from './hooks';
+
+export * from './prefabs';
+
+export * from './context';
