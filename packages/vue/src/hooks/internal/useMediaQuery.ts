@@ -1,46 +1,54 @@
-import * as React from 'react';
+import { MaybeRef, ref, unref, watchEffect, onScopeDispose } from 'vue';
 /**
- * Implementation used from https://github.com/juliencrn/usehooks-ts
+ * Implementation used from https://github.com/vueuse/vueuse/blob/main/packages/core/useMediaQuery/index.ts
  *
  * @internal
  */
-export function useMediaQuery(query: string): boolean {
-  const getMatches = (query: string): boolean => {
+export function useMediaQuery(query: MaybeRef<string>) {
+  const getMatches = (query: MaybeRef<string>): boolean => {
     // Prevents SSR issues
     if (typeof window !== 'undefined') {
-      return window.matchMedia(query).matches;
+      return window.matchMedia(unref(query)).matches;
     }
     return false;
   };
 
-  const [matches, setMatches] = React.useState<boolean>(getMatches(query));
+  let mediaQuery: MediaQueryList | undefined;
+  const matches = ref(getMatches(query));
 
   function handleChange() {
-    setMatches(getMatches(query));
+    matches.value = getMatches(query);
   }
 
-  React.useEffect(() => {
-    const matchMedia = window.matchMedia(query);
+  const cleanup = () => {
+    if (!mediaQuery) return
+    if (mediaQuery.removeListener) {
+      mediaQuery.removeListener(handleChange);
+    } else {
+      mediaQuery.removeEventListener('change', handleChange);
+    }
+  }
+
+  const stopWatch = watchEffect(() => {
+    cleanup()
+
+    mediaQuery = window.matchMedia(unref(query));
 
     // Triggered at the first client-side load and if query changes
     handleChange();
 
     // Listen matchMedia
-    if (matchMedia.addListener) {
-      matchMedia.addListener(handleChange);
+    if (mediaQuery.addListener) {
+      mediaQuery.addListener(handleChange);
     } else {
-      matchMedia.addEventListener('change', handleChange);
+      mediaQuery.addEventListener('change', handleChange);
     }
+  });
 
-    return () => {
-      if (matchMedia.removeListener) {
-        matchMedia.removeListener(handleChange);
-      } else {
-        matchMedia.removeEventListener('change', handleChange);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  onScopeDispose(() => {
+    stopWatch()
+    cleanup()
+  })
 
   return matches;
 }

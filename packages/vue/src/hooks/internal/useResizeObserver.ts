@@ -1,7 +1,4 @@
-/* eslint-disable no-return-assign */
-/* eslint-disable no-underscore-dangle */
-import * as React from 'react';
-import useLatest from '@react-hook/latest';
+import { MaybeRef, ref, unref, watch, onScopeDispose } from 'vue';
 
 /**
  * A React hook that fires a callback whenever ResizeObserver detects a change to its size
@@ -10,22 +7,20 @@ import useLatest from '@react-hook/latest';
  * @internal
  */
 export function useResizeObserver<T extends HTMLElement>(
-  target: React.RefObject<T>,
+  target: MaybeRef<T>,
   callback: UseResizeObserverCallback,
 ) {
   const resizeObserver = getResizeObserver();
-  const storedCallback = useLatest(callback);
+  let didUnsubscribe = false;
 
-  React.useLayoutEffect(() => {
-    let didUnsubscribe = false;
+  function cb(entry: ResizeObserverEntry, observer: ResizeObserver) {
+    if (didUnsubscribe) return;
+    callback(entry, observer);
+  }
 
-    const targetEl = target.current;
+  const stopWatch = watch(() => unref(target), () => {
+    const targetEl = unref(target);
     if (!targetEl) return;
-
-    function cb(entry: ResizeObserverEntry, observer: ResizeObserver) {
-      if (didUnsubscribe) return;
-      storedCallback.current(entry, observer);
-    }
 
     resizeObserver?.subscribe(targetEl as HTMLElement, cb);
 
@@ -33,7 +28,24 @@ export function useResizeObserver<T extends HTMLElement>(
       didUnsubscribe = true;
       resizeObserver?.unsubscribe(targetEl as HTMLElement, cb);
     };
-  }, [target.current, resizeObserver, storedCallback]);
+  }, {
+    immediate: true,
+    flush: "post",
+  })
+
+  const cleanup = () => {
+    didUnsubscribe = true;
+    if (resizeObserver) {
+      const targetEl = unref(target);
+      if (!targetEl) return;
+      resizeObserver?.unsubscribe(targetEl as HTMLElement, cb);
+    }
+  }
+
+  onScopeDispose(() => {
+    cleanup()
+    stopWatch()
+  })
 
   return resizeObserver?.observer;
 }
@@ -98,19 +110,23 @@ export type UseResizeObserverCallback = (
   observer: ResizeObserver,
 ) => unknown;
 
-export const useSize = (target: React.RefObject<HTMLDivElement>) => {
-  const [size, setSize] = React.useState({ width: 0, height: 0 });
-  React.useLayoutEffect(() => {
-    if (target.current) {
-      const { width, height } = target.current.getBoundingClientRect();
-      setSize({ width, height });
-    }
-  }, [target.current]);
+export const useSize = (target: MaybeRef<HTMLDivElement>) => {
+  const size = ref({ width: 0, height: 0 });
 
-  const resizeCallback = React.useCallback(
-    (entry: ResizeObserverEntry) => setSize(entry.contentRect),
-    [],
-  );
+  watch(() => unref(target), () => {
+    if (unref(target)) {
+      const { width, height } = unref(target).getBoundingClientRect();
+      size.value = { width, height };
+    }
+  }, {
+    immediate: true,
+    flush: "post",
+  })
+
+  const resizeCallback = (entry: ResizeObserverEntry) => {
+    size.value = { width: entry.contentRect.width, height: entry.contentRect.height };
+  };
+
   // Where the magic happens
   useResizeObserver(target, resizeCallback);
   return size;
